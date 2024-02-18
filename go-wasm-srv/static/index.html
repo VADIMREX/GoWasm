@@ -3,7 +3,7 @@
     <head>
         <title></title>
     </head>
-    <script src="wasm_exec.js"></script>
+    <script type="module" src="wasm_exec.js"></script>
     <script>
         /**
          * @this {HTMLInputElement}
@@ -25,13 +25,12 @@
                         }                        
                     break;
                 }
-
                 this.value = ""
             }
         }
     </script>
     <body>
-        <div>
+        <div id="history">
 
         </div>
         &gt;<input id="terminal" onkeyup="terminalUp.call(this, event)" type="text">
