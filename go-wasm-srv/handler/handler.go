@@ -20,6 +20,10 @@ func (h *Handler) ServeFile(ctx *gin.Context) {
 		path = "static/index.html"
 	case "/favicon.ico":
 		path = "static/favicon.ico"
+	case "/wasm_exec.js":
+		path = "static/wasm_exec.js"
+	case "/go", "/usr/local/go/bin/go":
+		path = "../go/bin/js_wasm/go"
 	}
 	ctx.File(path)
 }

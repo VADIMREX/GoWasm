@@ -3,10 +3,37 @@
     <head>
         <title></title>
     </head>
+    <script src="wasm_exec.js"></script>
+    <script>
+        /**
+         * @this {HTMLInputElement}
+         * @param {KeyboardEvent} e
+         */
+        async function terminalUp(e) {
+            if (13 == e.which) {
+                switch (this.value) {
+                    case "go env":
+                        let go = new Go();
+                        try {
+                            let result = await WebAssembly.instantiateStreaming(fetch("go"), go.importObject)
+                            //mod = result.module;
+                            inst = result.instance;
+                            await go.run(inst);
+			                //inst = await WebAssembly.instantiate(mod, go.importObject); // reset instance
+                        }catch(err) {
+                            console.error(err);
+                        }                        
+                    break;
+                }
+
+                this.value = ""
+            }
+        }
+    </script>
     <body>
         <div>
 
         </div>
-        &gt;<input type="text">
+        &gt;<input id="terminal" onkeyup="terminalUp.call(this, event)" type="text">
     </body>
 </html>
