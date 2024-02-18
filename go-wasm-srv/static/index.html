@@ -5,6 +5,17 @@
     </head>
     <script type="module" src="wasm_exec.js"></script>
     <script>
+        let FS, Process, Go, Stat;
+        import("./wasm_exec.js").then(m => {
+            FS = m.FS;
+            Process = m.Process;
+            Go = m.Go;
+            Stat = m.Stat;
+            FS.__directories["/home"] = new Stat(true)
+            FS.__directories["/usr/local/go/bin"] = new Stat(true)
+            FS.__files["/usr/local/go/bin/go"] = new Stat(false)
+            FS.__files["/usr/local/go/go.env"] = new Stat(false)
+        });
         /**
          * @this {HTMLInputElement}
          * @param {KeyboardEvent} e

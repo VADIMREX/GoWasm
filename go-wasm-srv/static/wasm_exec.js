@@ -11,7 +11,31 @@ function enosys() {
 
 let outputBuf = "";
 
-globalThis.fs = globalThis.fs || {
+class Stat {
+	constructor(isDir) {
+		this.isDirectory = ()=>isDir
+		this.dev = 0;
+		this.ino = 0;
+		this.mode = isDir ? 0x4777 : 0x777;
+		this.nlink = 0;
+		this.uid = 0;
+		this.gid = 0;
+		this.rdev = 0;
+		this.size = 0;
+		this.blksize = 0;
+		this.blocks = 0;
+		this.atimeMs = 0;
+		this.mtimeMs = 0;
+		this.ctimeMs = 0;
+	}
+}
+
+let FS = globalThis.fs || {
+	__directories: {},
+	__files: {},
+	__fileDescriptors: {},
+	__fileDescriptorsSeq: 0,
+	//
 	constants: { O_WRONLY: -1, O_RDWR: -1, O_CREAT: -1, O_TRUNC: -1, O_APPEND: -1, O_EXCL: -1 }, // unused
 	writeSync(fd, buf) {
 		outputBuf += decoder.decode(buf);
@@ -37,7 +61,8 @@ globalThis.fs = globalThis.fs || {
 		callback(enosys());
 	},
 	close(fd, callback) {
-		callback(enosys());
+		delete this.__fileDescriptors[fd]
+		callback(null);
 	},
 	fchmod(fd, mode, callback) {
 		callback(enosys());
@@ -46,7 +71,7 @@ globalThis.fs = globalThis.fs || {
 		callback(enosys());
 	},
 	fstat(fd, callback) {
-		callback(enosys());
+		callback(null, this.__fileDescriptors[fd]);
 	},
 	fsync(fd, callback) {
 		callback(null);
@@ -61,16 +86,41 @@ globalThis.fs = globalThis.fs || {
 		callback(enosys());
 	},
 	lstat(path, callback) {
-		callback(enosys());
+		let r = this.__directories[path]
+		if (r) {
+			callback(null, r);
+			return
+		}
+		let e = new Error("No such file or directory")
+		e.code = "ENOENT"
+		callback(e, null)
 	},
 	mkdir(path, perm, callback) {
-		callback(enosys());
+		if (!this.__directories[path]) {
+			this.__directories[path] = new Stat(true)
+			callback(null, 0)
+			return
+		}
+		let e = new Error("File exists")
+		e.code = "EEXIST"
+		callback(e, 0)
 	},
 	open(path, flags, mode, callback) {
-		callback(enosys());
+		if (this.__files[path]) {
+			let fd = this.__fileDescriptorsSeq++
+			this.__fileDescriptors[fd] = this.__files[path]
+			callback(null, fd)
+			return
+		}
+		let e = new Error("No such file or directory")
+		e.code = "ENOENT"
+		callback(e, null)
 	},
 	read(fd, buffer, offset, length, position, callback) {
-		callback(enosys());
+		let f = this.__fileDescriptors[fd]
+		let e = new Error("End of file")
+		e.code = "EIO"
+		callback(e, 0)
 	},
 	readdir(path, callback) {
 		callback(enosys());
@@ -82,10 +132,33 @@ globalThis.fs = globalThis.fs || {
 		callback(enosys());
 	},
 	rmdir(path, callback) {
-		callback(enosys());
+		if (this.__files[path]) {
+			let e = new Error("not a directory")
+			e.code = "ENOTDIR"
+			callback(e)
+			return
+		}
+		if (this.__directories[path]) {
+			delete this.__directories[path]
+			callback(null)
+			return
+		}
+		let e = new Error("No such file or directory")
+		e.code = "ENOENT"
+		callback(e, null)
 	},
 	stat(path, callback) {
-		callback(enosys());
+		if (this.__files[path]) {
+			callback(null, this.__files[path])
+			return
+		}
+		if (this.__directories[path]) {
+			callback(null, this.__directories[path])
+			return
+		}
+		let e = new Error("No such file or directory")
+		e.code = "ENOENT"
+		callback(e, null)
 	},
 	symlink(path, link, callback) {
 		callback(enosys());
@@ -94,14 +167,28 @@ globalThis.fs = globalThis.fs || {
 		callback(enosys());
 	},
 	unlink(path, callback) {
-		callback(enosys());
+		if (this.__directories[path]) {
+			let e = new Error("Is a directory")
+			e.code = "EISDIR"
+			callback(e)
+			return
+		}
+		if (this.__files[path]) {
+			delete this.__files[path]
+			callback(null)
+			return
+		}
+		let e = new Error("No such file or directory")
+		e.code = "ENOENT"
+		callback(e, null)
 	},
 	utimes(path, atime, mtime, callback) {
 		callback(enosys());
 	},
 };
 
-globalThis.process = globalThis.process || {
+let Process = globalThis.process || {
+	__cwd: "",
 	getuid() { return -1; },
 	getgid() { return -1; },
 	geteuid() { return -1; },
@@ -110,10 +197,12 @@ globalThis.process = globalThis.process || {
 	pid: -1,
 	ppid: -1,
 	umask() { throw enosys(); },
-	cwd() { throw enosys(); },
+	cwd() { return __cwd },
 	chdir() { throw enosys(); },
 }
 
+globalThis.fs = FS;
+globalThis.process = Process;
 
 if (!globalThis.crypto) {
 	throw new Error("globalThis.crypto is not available, polyfill required (crypto.getRandomValues only)");
@@ -603,4 +692,4 @@ class Go {
 
 globalThis.Go = Go;
 
-export { Go }
+export { FS, Process, Go, Stat }
