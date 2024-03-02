@@ -3,10 +3,13 @@
 // license that can be found in the LICENSE file.
 "use strict";
 
-function enosys() {
-	const err = new Error("not implemented");
-	err.code = "ENOSYS";
+function goError(code, msg) {
+	const err = new Error(msg);
+	err.code = code;
 	return err;
+}
+function enosys() {
+	return goError("ENOSYS", "not implemented");
 };
 
 let outputBuf = "";
@@ -91,9 +94,7 @@ let FS = globalThis.fs || {
 			callback(null, r);
 			return
 		}
-		let e = new Error("No such file or directory")
-		e.code = "ENOENT"
-		callback(e, null)
+		callback(goError("ENOENT", "No such file or directory"), null)
 	},
 	mkdir(path, perm, callback) {
 		if (!this.__directories[path]) {
@@ -101,9 +102,7 @@ let FS = globalThis.fs || {
 			callback(null, 0)
 			return
 		}
-		let e = new Error("File exists")
-		e.code = "EEXIST"
-		callback(e, 0)
+		callback(goError("EEXIST", "File exists"), 0)
 	},
 	open(path, flags, mode, callback) {
 		if (this.__files[path]) {
@@ -112,15 +111,11 @@ let FS = globalThis.fs || {
 			callback(null, fd)
 			return
 		}
-		let e = new Error("No such file or directory")
-		e.code = "ENOENT"
-		callback(e, null)
+		callback(goError("ENOENT", "No such file or directory"), null)
 	},
 	read(fd, buffer, offset, length, position, callback) {
 		let f = this.__fileDescriptors[fd]
-		let e = new Error("End of file")
-		e.code = "EIO"
-		callback(e, 0)
+		callback(goError("EIO", "End of file"), 0)
 	},
 	readdir(path, callback) {
 		callback(enosys());
@@ -133,9 +128,7 @@ let FS = globalThis.fs || {
 	},
 	rmdir(path, callback) {
 		if (this.__files[path]) {
-			let e = new Error("not a directory")
-			e.code = "ENOTDIR"
-			callback(e)
+			callback(goError("ENOTDIR", "not a directory"))
 			return
 		}
 		if (this.__directories[path]) {
@@ -143,9 +136,7 @@ let FS = globalThis.fs || {
 			callback(null)
 			return
 		}
-		let e = new Error("No such file or directory")
-		e.code = "ENOENT"
-		callback(e, null)
+		callback(goError("ENOENT", "No such file or directory"), null)
 	},
 	stat(path, callback) {
 		if (this.__files[path]) {
@@ -156,9 +147,7 @@ let FS = globalThis.fs || {
 			callback(null, this.__directories[path])
 			return
 		}
-		let e = new Error("No such file or directory")
-		e.code = "ENOENT"
-		callback(e, null)
+		callback(goError("ENOENT", "No such file or directory"), null)
 	},
 	symlink(path, link, callback) {
 		callback(enosys());
@@ -168,9 +157,7 @@ let FS = globalThis.fs || {
 	},
 	unlink(path, callback) {
 		if (this.__directories[path]) {
-			let e = new Error("Is a directory")
-			e.code = "EISDIR"
-			callback(e)
+			callback(goError("EISDIR", "Is a directory"))
 			return
 		}
 		if (this.__files[path]) {
@@ -178,9 +165,7 @@ let FS = globalThis.fs || {
 			callback(null)
 			return
 		}
-		let e = new Error("No such file or directory")
-		e.code = "ENOENT"
-		callback(e, null)
+		callback(goError("ENOENT", "No such file or directory"), null)
 	},
 	utimes(path, atime, mtime, callback) {
 		callback(enosys());
